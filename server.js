@@ -1,45 +1,201 @@
 'use strict';
 
 
-require( 'dotenv' ).config();
-const express = require( 'express' );
-const cors = require( 'cors' );
-const weather = require( './data/weather.json' );
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+// const weather = require( './data/weather.json' );
+const axios = require('axios');
 
 const app = express();
-app.use( cors() );
+app.use(cors());
 
-const PORT = process.env.PORT || 3002;
+const PORT = 3002;
 
-//localhost:3001/weather?searchQuery=amman
-app.get( '/weather', handleWeather );
-app.use( '*', ( request, response ) => response.status( 404 ).send( 'page not found' ) );
+//http://localhost:3002/weather?city=amman
+app.get('/weather', getWeather);
 
-function handleWeather( request, response ) {
-  let searchQuery = request.query.searchQuery;
-  const city = weather.find( city => city.city_name.toLowerCase() === searchQuery.toLowerCase() );
-  if( city != undefined )
-  {
-    const weatherArray = city.data.map( day => new Forecast( day ) );
-    response.status( 200 ).send( weatherArray );
+//our url route will be http://localhost:3002/test
+app.get( '/test', ( request, response ) => {
+  let smth = 'hello from the test route'; //<< testing a route
+  response.send( smth );
+} );
+
+
+// let weatherArr = [];
+
+
+async function getWeather(request, response) {
+  let city = request.query.cityName;
+  let lon = request.query.lon;
+  let lat = request.query.lat;
+
+
+  const URL = `http://api.weatherbit.io/v2.0/forecast/daily?lat=${lat}&lon=${lon}&city=${city}&key=${process.env.WEATHER_API_KEY}`;
+
+
+
+
+
+
+  axios
+    .get(URL)
+    .then(result => {
+      let weatherArr = result.data.data
+
+      response.send(gettingWeatherData(weatherArr));
+      console.log('i am inside the promise');
+
+
+    })
+
+    .catch(err => {
+      response.send(err);
+      console.log('outside promise');
+    });
+
+
+
+
+
+  //   const city = weather.find( city => city.city_name.toLowerCase() === searchQuery.toLowerCase() );
+  //   if( city != undefined )
+  //   {
+  //     const weatherArray = city.data.map( day => new Forecast( day ) );
+  //     response.status( 200 ).send( weatherArray );
+  //   }
+  //   else
+  //   {
+  //     errorHandler( response );
+  //   }
+}
+
+
+function gettingWeatherData(weatherobj) {
+
+  let forcastObejct = [];
+
+  weatherobj.map(element => {
+    const description = `Low of ${element.low_temp}, high of ${element.max_temp} with ${element.weather.description}`;
+    const date = `${element.datetime}`;
+
+    forcastObejct.push(new WeatherObject(description, date));
+
+  });
+  return forcastObejct;
+
+
+};
+
+
+class WeatherObject {
+
+  constructor(item) {
+
+    this.description = item.data.description;
+    this.date = item.data.datetime;
+
   }
-  else
-  {
-    errorHandler( response );
+
+}
+
+
+
+
+//http://localhost:3002/movies?cityname=Amman
+app.get('/movies', getMoviesHandler);
+
+async function getMoviesHandler(req, res) {
+  const city = req.query.cityname;
+
+  const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_API_KEY}&query=${city}`;
+
+
+  axios
+    .get(url)
+    .then(result => {
+      console.log('inside promise');
+
+      let moviesArray = result.data.results;
+
+      res.send(moviesobjectFunction(moviesArray));
+    })
+    .catch(err => {
+      res.send(err);
+    })
+  console.log('outside promise');
+}
+
+
+
+
+const moviesobjectFunction = (moviesobj) => {
+
+  const movieslistObj = [];
+
+  moviesobj.map(element => {
+
+    const title = element.title;
+
+
+    const overview = element.overview
+
+
+    const average_votes = element.vote_average
+
+    const total_votes = element.vote_count
+
+
+    const image_url = process.env.imgurl + element.poster_path
+
+
+    const popularity = element.popularity
+
+
+    const released_on = element.release_date
+
+
+    movieslistObj.push(new Movies(title, overview, average_votes, total_votes, image_url, popularity, released_on));
+
+    console.log(movieslistObj);
+
+  });
+
+  return movieslistObj;
+
+};
+
+
+class Movies {
+
+  constructor(title, overview, average_votes, total_votes, image_url, popularity, released_on) {
+
+    this.title = title;
+    this.overview = overview;
+    this.average_votes = average_votes;
+    this.total_votes = total_votes;
+    this.image_url = image_url;
+    this.popularity = popularity;
+    this.released_on = released_on;
   }
 }
 
-function errorHandler( response ) {
-  response.status( 500 ).send( 'something went wrong' );
-}
+
+// function errorHandler( response ) {
+//   response.status( 500 ).send( 'something went wrong' );
+// }
 
 
-function Forecast( day ) {
-  this.date = day.valid_date;
-  this.description = day.weather.description;
-}
+// function Forecast( day ) {
+//   this.date = day.valid_date;
+//   this.description = day.weather.description;
+// }
 
-app.listen( PORT, () => console.log( `listening on ${PORT}` ) );
+app.use('*', (request, response) => response.status(404).send('page not found'));
+
+app.listen(PORT, () => {
+  console.log(`I am Listening on port: ${PORT}`);
+});
 
 
 
@@ -61,7 +217,7 @@ app.listen( PORT, () => console.log( `listening on ${PORT}` ) );
 
 
 // server.use( cors() );
-// const PORT = 3000;//<< Our PORT digital number
+// const PORT = 3002;//<< Our PORT digital number
 
 
 // //our url route will be http://localhost:3000/
@@ -80,41 +236,50 @@ app.listen( PORT, () => console.log( `listening on ${PORT}` ) );
 
 
 
-// // server.get( '/getweather', ( req,res )=> {
-// //   let test = weatherData.data.map( item => {
-// //     return item.city_name;
-// //   } );
-
-// //   res.send( test );
-// // } )
+// //our url route will be http://localhost:3002/weather
+// server.get( '/weather', weatherHandler );
 
 
 
-// //our url route will be http://localhost:3000/weather
-// server.get( '/weather', ( request, response ) => {
 
-//   // response.send( weatherData.data);
-//   // console.log( weatherData );
-//   // const cityName = request.query.name;
-//   const lon = request.query.lon;
-//   // const lat = request.query.lat;
 
-//   let cityNameData = weatherData.data.find( item => {
-//     if ( item.lon == lon ) {
-//       return item;
+// function weatherHandler( request, response ) {
+
+
+//   console.log( weatherData );
+//   // response.send( weatherData );
+//   const cityName = request.query.name;
+
+
+//   let cityNameData = weatherData.find( item => {
+//     if ( item.city_name.toLowerCase() === cityName.toLowerCase() ) {
+//       return item.city_name;
+//     } else if ( cityNameData !== undefined ){
+//       response.send( 'error' );
+
 //     }
 
-
-//   response.send( cityNameData );
-//   console.log( cityNameData );
-//   console.log( lon );
 //   } );
+
+//   // response.send( cityNameData.data );
+//   console.log( cityNameData );
+
+//   // } );
 
 //   // let ourdata = weatherdata.data.map(item => {
 //   //     return item.clouds ;
 //   // });
 //   // response.send(ourdata);
-// } );
+
+// }
+
+
+
+
+// class Forecast {
+
+// }
+
 
 // server.get( '*', ( request, response ) => {
 //   response.status( 404 ).send( 'page not found 404' ); //<< universal route
