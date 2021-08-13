@@ -16,17 +16,17 @@ const PORT = 3002;
 app.get('/weather', getWeather);
 
 //our url route will be http://localhost:3002/test
-app.get( '/test', ( request, response ) => {
+app.get('/test', (request, response) => {
   let smth = 'hello from the test route'; //<< testing a route
-  response.send( smth );
-} );
+  response.send(smth);
+});
 
 
 // let weatherArr = [];
 
 
-async function getWeather(request, response) {
-  let city = request.query.cityName;
+function getWeather(request, response) {
+  let city = request.query.city;
   let lon = request.query.lon;
   let lat = request.query.lat;
 
@@ -71,29 +71,29 @@ async function getWeather(request, response) {
 }
 
 
-function gettingWeatherData(weatherobj) {
+function gettingWeatherData(weatherObj) {
 
-  let forcastObejct = [];
+  let forCastObejct = [];
 
-  weatherobj.map(element => {
+  weatherObj.map(element => {
     const description = `Low of ${element.low_temp}, high of ${element.max_temp} with ${element.weather.description}`;
     const date = `${element.datetime}`;
 
-    forcastObejct.push(new WeatherObject(description, date));
+    forCastObejct.push(new WeatherObject(description, date));
 
+    console.log(forCastObejct);
   });
-  return forcastObejct;
-
+  return forCastObejct;
 
 };
 
 
 class WeatherObject {
 
-  constructor(item) {
+  constructor(description, date) {
 
-    this.description = item.data.description;
-    this.date = item.data.datetime;
+    this.description = description;
+    this.date = date;
 
   }
 
